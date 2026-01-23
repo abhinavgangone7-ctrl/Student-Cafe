@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 20 14.3% 4.1%;
+    --foreground: 60 9.1% 97.8%;
+    --primary: 47.9 95.8% 53.1%;
+    --primary-foreground: 26 83.3% 14.1%;
+    --border: 12 6.5% 15.1%;
+    --radius: 0.5rem;
+  }
+
+  body {
+    @apply bg-zinc-950 text-zinc-100;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .btn-primary {
+    @apply bg-amber-500 text-black px-6 py-3 rounded-lg font-medium hover:bg-amber-400 transition-colors uppercase tracking-wider;
+  }
+}
