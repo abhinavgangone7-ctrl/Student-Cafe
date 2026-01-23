@@ -11,7 +11,7 @@ const Navbar = () => {
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 h-16">
             <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
-                <Link to={currentUser ? "/menu" : "/"} className="flex items-center gap-2 font-bold text-xl dark:text-white">
+                <Link to="/" className="flex items-center gap-2 font-bold text-xl dark:text-white">
                     <Coffee className="w-6 h-6 text-amber-500" />
                     <span>Student Café</span>
                 </Link>
