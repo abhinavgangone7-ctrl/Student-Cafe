@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import Navbar from "../components/layout/Navbar";
@@ -6,6 +6,8 @@ import { CreditCard, Loader2 } from "lucide-react";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../context/AuthContext";
+import { logger } from "../lib/logger";
+import { useRateLimit } from "../hooks/useRateLimit";
 
 const Checkout = () => {
     const { items, totalPrice, clearCart } = useCart();
@@ -13,58 +15,115 @@ const Checkout = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
+    // Protection: Warn user if they try to refresh during payment
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            if (loading) {
+                e.preventDefault();
+                e.returnValue = "";
+            }
+        };
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }, [loading]);
+
     const tax = totalPrice * 0.08;
     const finalTotal = totalPrice + tax;
 
+    const checkRateLimit = useRateLimit("checkout_pay", 10000); // 10 seconds cooldown
+
     const handlePayment = async (e) => {
         e.preventDefault();
-        setLoading(true);
-
-        // Simulate payment delay
-        await new Promise(resolve => setTimeout(resolve, 2000));
 
         try {
+            checkRateLimit();
+        } catch (error) {
+            alert(error.message);
+            return;
+        }
+
+        setLoading(true);
+
+        // Check 1: Network Connectivity
+        if (!navigator.onLine) {
+            setLoading(false);
+            alert("No internet connection. Please check your network and try again.");
+            return;
+        }
+
+        // Check 2: Payload Validation (Zero Compromise)
+        if (!currentUser?.uid || items.length === 0 || finalTotal <= 0) {
+            setLoading(false);
+            alert("Order validation failed. Please refresh and try again.");
+            return;
+        }
+
+        try {
+            // STEP 1: Verify Prices with "Source of Truth" (Database)
+            // We do NOT trust the client-side cart prices.
+            const verifiedItems = await Promise.all(
+                items.map(async (cartItem) => {
+                    const { doc, getDoc } = await import("firebase/firestore");
+                    const productSnap = await getDoc(doc(db, "products", cartItem.id));
+
+                    if (!productSnap.exists()) {
+                        throw new Error(`Product ${cartItem.name} no longer exists.`);
+                    }
+
+                    const realData = productSnap.data();
+                    // Return the item with the REAL price from DB
+                    return {
+                        id: cartItem.id,
+                        name: realData.name,
+                        price: Number(realData.price),
+                        quantity: Math.max(1, Number(cartItem.quantity)) // Force positive quantity
+                    };
+                })
+            );
+
+            // STEP 2: Recalculate Total with Verified Data
+            const verifiedSubtotal = verifiedItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+            const verifiedTax = verifiedSubtotal * 0.08;
+            const verifiedTotal = Number((verifiedSubtotal + verifiedTax).toFixed(2));
+
+            // Sanity Check: If the hacked local total differs significantly, we technically proceed with the REAL total.
+            // Or we could alert the user. Proceeding with real total is smoother (auto-fix).
+
             const tokenNumber = Math.floor(1000 + Math.random() * 9000).toString();
 
-            // Create order in Firestore
-            // Create order in Firestore
-            const orderRef = await addDoc(collection(db, "orders"), {
+            // Prepare Verified Payload
+            const orderPayload = {
                 userId: currentUser.uid,
-                userEmail: currentUser.email,
-                items: items,
-                total: finalTotal,
+                userEmail: currentUser.email || "unknown",
+                items: verifiedItems, // Use the verified list
+                total: verifiedTotal, // Use the verified total
                 status: "pending",
                 createdAt: serverTimestamp(),
                 tokenNumber: tokenNumber
-            });
+            };
+
+            // Create order in Firestore
+            const orderRef = await addDoc(collection(db, "orders"), orderPayload);
 
             // Navigate to confirmation page
-            // Note: We do NOT clear cart here to avoid race condition with the "empty cart redirect".
-            // The cart will be cleared by the OrderConfirmation page upon mounting.
             navigate("/order-confirmation", {
                 state: {
                     orderId: orderRef.id,
                     tokenNumber: tokenNumber,
-                    items: items,
-                    total: finalTotal
+                    items: verifiedItems,
+                    total: verifiedTotal
                 }
             });
         } catch (error) {
-            console.error("Payment failed full error:", error);
+            logger.error("PAYMENT", "Payment transaction failed.", error);
             alert(`Payment failed: ${error.message}`);
         } finally {
-            // we do NOT set loading to false if we navigated away? 
-            // actually if we navigated, the component might unmount.
-            // but if we failed, we must set it to false.
-            // If success, we navigated. Setting state on unmounted component is a warning but benign.
-            // However, if we cleared cart, we are now empty.
-            // If we set loading to false, the guard clause `!loading && items.length === 0` will become true and redirect us to home!
-            // SO: If success, do NOT set loading to false.
             if (items.length > 0) {
                 setLoading(false);
             }
         }
     };
+
 
     // If cart is empty and we are NOT in the middle of payment/loading, redirect to home.
     // This prevents race condition where clearCart() is called before navigation.
@@ -100,6 +159,9 @@ const Checkout = () => {
                                 required
                                 type="text"
                                 placeholder="John Doe"
+                                maxLength={100}
+                                pattern=".*[a-zA-Z]+.*"
+                                title="Name must contain at least one letter"
                                 className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-black dark:focus:ring-white outline-none transition-all"
                             />
                         </div>
@@ -111,6 +173,12 @@ const Checkout = () => {
                                 type="text"
                                 placeholder="4242 4242 4242 4242"
                                 maxLength="19"
+                                onChange={(e) => {
+                                    // STRICT VALIDATION: Only numbers allowed
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    // Add spaces every 4 digits for UX
+                                    e.target.value = val.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+                                }}
                                 className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-black dark:focus:ring-white outline-none transition-all font-mono"
                             />
                         </div>
@@ -123,6 +191,12 @@ const Checkout = () => {
                                     type="text"
                                     placeholder="MM/YY"
                                     maxLength="5"
+                                    onChange={(e) => {
+                                        // Auto-format MM/YY
+                                        let v = e.target.value.replace(/\D/g, '');
+                                        if (v.length >= 2) v = v.substring(0, 2) + '/' + v.substring(2, 4);
+                                        e.target.value = v;
+                                    }}
                                     className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-black dark:focus:ring-white outline-none transition-all"
                                 />
                             </div>
@@ -132,7 +206,13 @@ const Checkout = () => {
                                     required
                                     type="text"
                                     placeholder="123"
-                                    maxLength="3"
+                                    maxLength={3}
+                                    pattern="\d{3}"
+                                    onChange={(e) => {
+                                        // strict numbers only
+                                        e.target.value = e.target.value.replace(/\D/g, '');
+                                    }}
+                                    title="3-digit CVV"
                                     className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-black dark:focus:ring-white outline-none transition-all"
                                 />
                             </div>

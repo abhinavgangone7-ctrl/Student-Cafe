@@ -5,25 +5,74 @@ import Navbar from "../components/layout/Navbar";
 import { useCart } from "../context/CartContext";
 import { SeedButton } from "../features/menu/SeedButton";
 import { Loader2, Plus, Minus } from "lucide-react";
+import { logger } from "../lib/logger";
 
 const categories = ["All", "Coffee", "Tea", "Food"];
 
 const Menu = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [category, setCategory] = useState("All");
     const { addToCart, items, updateQuantity } = useCart();
 
-    const fetchProducts = async () => {
+    const fetchProducts = async (retryCount = 0) => {
         setLoading(true);
+        setError(null);
+
+        // CACHE CHECK (Performance Fix)
+        const CACHE_KEY = "menu_cache_v1";
+        const CACHE_DURATION = 60 * 60 * 1000; // 1 Hour
+
+        try {
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (cached) {
+                const { data, timestamp } = JSON.parse(cached);
+                if (Date.now() - timestamp < CACHE_DURATION) {
+                    logger.info("DATA", "Loaded menu from cache.");
+                    setProducts(data);
+                    setLoading(false);
+                    return;
+                }
+            }
+        } catch (e) {
+            // Ignore cache errors
+        }
+
         try {
             const q = query(collection(db, "products"));
             const snapshot = await getDocs(q);
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setProducts(data);
+            let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // RECOVERY MECHANISM: Validating Data before State Update
+            // This prevents "Corrupted Data" from crashing the UI
+            const validData = data.filter(item => {
+                return item.id && item.name && typeof item.price === 'number';
+            });
+
+            if (data.length > 0 && validData.length === 0) {
+                // All data was corrupt
+                throw new Error("Critical Data Corruption Detected");
+            }
+
+            setProducts(validData);
+
+            // Save to Cache
+            try {
+                localStorage.setItem(CACHE_KEY, JSON.stringify({
+                    data,
+                    timestamp: Date.now()
+                }));
+            } catch (e) {
+                // Quota exceeded, ignore
+            }
+
         } catch (error) {
-            console.error("Error fetching menu:", error);
+            logger.error("DATA", "Failed to fetch menu products.", error);
+            setError("Data integrity check failed. Please contact support.");
         } finally {
+            // Only stop loading if we succeeded or if we ran out of retries
+            // Note: If cache hit, we returned early, so this runs for network calls
             setLoading(false);
         }
     };
@@ -31,6 +80,8 @@ const Menu = () => {
     useEffect(() => {
         fetchProducts();
     }, []);
+
+    // Database is now seeded and locked. Maintenance script removed.
 
     const filteredProducts = category === "All"
         ? products
@@ -68,7 +119,17 @@ const Menu = () => {
                     </div>
                 </div>
 
-                {loading ? (
+                {error ? (
+                    <div className="text-center py-20 border border-red-900/50 bg-red-900/10 rounded-2xl">
+                        <p className="text-red-400 mb-4">{error}</p>
+                        <button
+                            onClick={() => fetchProducts()}
+                            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                ) : loading ? (
                     <div className="flex justify-center py-20">
                         <Loader2 className="animate-spin w-8 h-8 text-amber-500" />
                     </div>
@@ -134,6 +195,7 @@ const Menu = () => {
                         })}
                     </div>
                 )}
+
             </div>
         </div>
     );

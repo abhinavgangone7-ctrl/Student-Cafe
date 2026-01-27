@@ -3,12 +3,12 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  projectId: "student-cafe-app-v1-9382",
-  appId: "1:617205817982:web:321ac18746efcb2f2cee2f",
-  storageBucket: "student-cafe-app-v1-9382.firebasestorage.app",
-  apiKey: "AIzaSyD9laekh65sopXzCUxsestR74kMDLMhg7g",
-  authDomain: "student-cafe-app-v1-9382.firebaseapp.com",
-  messagingSenderId: "617205817982",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);

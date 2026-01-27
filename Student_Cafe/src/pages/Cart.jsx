@@ -2,7 +2,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import Navbar from "../components/layout/Navbar";
 import { Trash2, Plus, Minus, ArrowRight } from "lucide-react";
-import { motion } from "framer-motion";
 
 const Cart = () => {
     const { items, removeFromCart, updateQuantity, totalPrice } = useCart();
@@ -39,8 +38,7 @@ const Cart = () => {
 
                 <div className="space-y-6">
                     {items.map((item) => (
-                        <motion.div
-                            layout
+                        <div
                             key={item.id}
                             className="bg-white dark:bg-zinc-900 p-4 rounded-2xl flex items-center gap-4 shadow-sm border border-zinc-200 dark:border-zinc-800"
                         >
@@ -81,7 +79,7 @@ const Cart = () => {
                             <div className="text-right font-bold w-20 dark:text-white">
                                 ${(item.price * item.quantity).toFixed(2)}
                             </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 

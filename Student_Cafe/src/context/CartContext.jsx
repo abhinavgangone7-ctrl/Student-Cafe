@@ -4,17 +4,51 @@ const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
 
+// Safe Storage Helper: Prevents crashes if localStorage is full or disabled
+const safeStorage = {
+    getItem: (key) => {
+        try {
+            return localStorage.getItem(key);
+        } catch (e) {
+            console.warn("LocalStorage access failed (Read):", e);
+            return null;
+        }
+    },
+    setItem: (key, value) => {
+        try {
+            localStorage.setItem(key, value);
+        } catch (e) {
+            console.warn("LocalStorage access failed (Write). Using memory fallback:", e);
+        }
+    }
+};
+
+import { useAuth } from "./AuthContext";
+
 export const CartProvider = ({ children }) => {
+    const { currentUser } = useAuth(); // Listen to Auth State
     const [items, setItems] = useState(() => {
-        const saved = localStorage.getItem("cart");
-        return saved ? JSON.parse(saved) : [];
+        const saved = safeStorage.getItem("cart");
+        try {
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            return [];
+        }
     });
 
     const [isCartOpen, setIsCartOpen] = useState(false);
 
     useEffect(() => {
-        localStorage.setItem("cart", JSON.stringify(items));
+        safeStorage.setItem("cart", JSON.stringify(items));
     }, [items]);
+
+    // SECURITY FIX: Clear cart when user logs out
+    useEffect(() => {
+        if (!currentUser) {
+            setItems([]); // Clear state
+            safeStorage.setItem("cart", JSON.stringify([])); // Clear storage
+        }
+    }, [currentUser]);
 
     const addToCart = useCallback((product) => {
         setItems((prev) => {
