@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Coffee, AlertCircle } from "lucide-react";
+import { Coffee, AlertCircle, Loader2 } from "lucide-react";
+import { logger } from "../lib/logger";
+import { useRateLimit } from "../hooks/useRateLimit";
 
 const Login = () => {
     const { login, currentUser } = useAuth();
@@ -15,13 +17,17 @@ const Login = () => {
         }
     }, [currentUser, navigate]);
 
+    const checkRateLimit = useRateLimit("auth_login", 3000); // 3 seconds cooldown
+
     const handleLogin = async () => {
         try {
+            checkRateLimit();
             setError("");
             setLoading(true);
             await login();
+            navigate("/menu");
         } catch (error) {
-            console.error("Failed to login", error);
+            logger.error("AUTH", "User failed to sign in with Google.", error);
             setError("Failed to sign in. Please try again.");
         } finally {
             setLoading(false);

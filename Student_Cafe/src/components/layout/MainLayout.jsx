@@ -1,6 +1,6 @@
 import { useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
 import CartSidebar from "../features/CartSidebar";
+import FeedbackWidget from "../features/FeedbackWidget";
 
 const MainLayout = ({ children }) => {
     const location = useLocation();
@@ -10,10 +10,7 @@ const MainLayout = ({ children }) => {
             {/* Animated Background */}
             <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
                 {/* The Image Layer */}
-                <motion.div
-                    initial={{ scale: 1.1 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 20, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+                <div
                     className="absolute inset-0 w-full h-full bg-[url('/cafe-bg.png')] bg-cover bg-center opacity-40 blur-[2px]"
                 />
 
@@ -34,6 +31,7 @@ const MainLayout = ({ children }) => {
             </div>
 
             <CartSidebar />
+            <FeedbackWidget />
         </div>
     );
 };

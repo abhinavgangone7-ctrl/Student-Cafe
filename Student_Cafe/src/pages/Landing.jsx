@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, Coffee, Wifi, BookOpen } from "lucide-react";
+import Navbar from "../components/layout/Navbar";
 
 const Landing = () => {
     return (
         <div className="min-h-screen bg-zinc-950 text-white selection:bg-amber-500/30">
+            <Navbar />
             {/* HERO SECTION */}
             <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 text-center">
                 <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
