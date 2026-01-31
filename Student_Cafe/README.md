@@ -263,6 +263,21 @@ You asked for more detail. Here is **Why** we use it.
 *   It lets you jump from "HTML Mode" back into "JavaScript Mode" for a second.
 *   "Show a button... *opens portal to ask logic*... use the text 'Eat Burger'... *closes portal*... end button."
 
+### 🍳 DEEP DIVE: What does Vite actually do?
+You asked: *"What does 'Cooking' mean?"*
+
+**The Problem:**
+*   Web Browsers (Chrome, Edge) are kind of dumb. They **do not understand** React or JSX files.
+*   If you feed a browser a `.jsx` file, it will choke (throw an error). It's like serving **Raw Chicken** to a customer.
+
+**The Solution (Vite):**
+*   **Vite** is the **Oven / Food Processor**.
+*   It takes your fancy React code (Raw Chicken).
+*   It **transmutes** (compiles) it into plain, old-fashioned JavaScript (Cooked Chicken).
+*   **"Cooking"** means:
+    1.  **Translating:** Changing `<button>` (JSX) into `document.createElement('button')` (JS).
+    2.  **Bundling:** Mashing all 50 files into 1 big file so it loads faster.
+
 ---
 
 *   **"Export default" vs "Export":** Think of a file like a box.
@@ -284,7 +299,34 @@ You asked for more detail. Here is **Why** we use it.
 | **`public/` Folder** | **Vending Machine** | You put raw items (Images, PDF) in, you get raw items out. No cooking. |
 | **React** | **Lego Master** | Allows you to glue basic HTML bricks together to make custom Super-Bricks. |
 | **Port 3000** | **Apt #3000** | The specific room in your computer where your app lives. |
+| **IP Address** | **Street Address** | **Internet Protocol Address**. The unique number (GPS) that tells the internet where your house (computer) is. |
 | **Logs** | **Captain's Diary** | A written record of everything that happened ("10:00 AM - Engine Started"). Used for solving mysteries (debugging). |
+| **`ops` Folder** | **Janitor's Closet** | Manuals/Scripts for maintenance. Not part of the main house. |
+
+---
+
+## 8️⃣ UNIVERSAL VS SPECIFIC (What carries over?)
+You asked: *"Is every project like this?"*
+
+### ✅ The Standards (Every House has these)
+No matter where you work (Google, Facebook, Startup), you will see these:
+*   `package.json` (The Shopping List)
+*   `node_modules` (The Tools)
+*   `src` (The Kitchen/Code)
+*   `public` (The Vending Machine)
+*   `.gitignore` (The Block List)
+*   `README.md` (The Manual)
+
+### 🔀 The Variables (Different Appliances)
+Different chefs like different ovens.
+*   **Vite:** Some use **Next.js** or **Webpack** instead.
+*   **ESLint:** some use **Prettier**.
+
+### 🦄 The Specials (Just THIS House)
+These are specific layout choices we made for *this* Student Cafe:
+*   `ops/` (Most projects don't have this).
+*   `lib/firebase.js` (Only projects that use Firebase have this).
+*   `AuthContext.jsx` (Only projects with Login users have this).
 
 ---
 
