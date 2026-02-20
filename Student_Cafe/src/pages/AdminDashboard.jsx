@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+// Firestore: Query, OrderBy, and onSnapshot (Realtime Listener)
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, limit } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../context/AuthContext";
@@ -8,25 +9,31 @@ import { logger } from "../lib/logger";
 
 const AdminDashboard = () => {
     const { currentUser } = useAuth();
+    // 1. Data State (Live)
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // 2. Filter State
     const [filter, setFilter] = useState("pending"); // 'pending', 'completed', 'all'
     const [backupLoading, setBackupLoading] = useState(false);
 
-    // KITCHEN DISPLAY SYSTEM: Real-time Listener
+    // --- REALTIME LISTENER ---
+    // Instead of fetching once, we "subscribe" to changes.
+    // If a new order comes in, this code runs automatically.
     useEffect(() => {
-        // Query recent orders
+        // Query: Get last 100 orders, newest first
         const q = query(
             collection(db, "orders"),
             orderBy("createdAt", "desc"),
             limit(100)
         );
 
+        // onSnapshot connects to the socket
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const liveData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
-                // Handle Timestamp for display
+                // Convert Firestore Timestamp to JS Date
                 createdAt: doc.data().createdAt?.toDate() || new Date()
             }));
             setOrders(liveData);
@@ -36,9 +43,11 @@ const AdminDashboard = () => {
             setLoading(false);
         });
 
+        // Cleanup: Disconnect listener when component unmounts
         return () => unsubscribe();
     }, []);
 
+    // Action: Change Order Status (e.g., Pending -> Completed)
     const updateStatus = async (orderId, newStatus) => {
         try {
             const orderRef = doc(db, "orders", orderId);
@@ -54,15 +63,19 @@ const AdminDashboard = () => {
         }
     };
 
+    // Feature: Backup Menu Data to JSON
     const handleBackup = async () => {
         setBackupLoading(true);
         try {
-            const { getDocs, collection } = await import("firebase/firestore"); // Dynamic import
+            const { getDocs, collection } = await import("firebase/firestore"); // Dynamic import to save bundle size
             const snapshot = await getDocs(collection(db, "products"));
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+            // Create a downloadable blob
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
             const url = URL.createObjectURL(blob);
+
+            // Auto-click it
             const a = document.createElement("a");
             a.href = url;
             a.download = `menu_backup_${new Date().toISOString().split('T')[0]}.json`;
@@ -78,7 +91,7 @@ const AdminDashboard = () => {
         }
     };
 
-    // Filter Logic
+    // UI: Filter Logic
     const filteredOrders = orders.filter(o =>
         filter === 'all' ? true : o.status === filter
     );
@@ -88,7 +101,7 @@ const AdminDashboard = () => {
             <Navbar />
             <div className="max-w-6xl mx-auto px-6">
 
-                {/* Header */}
+                {/* Header Section */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                     <div>
                         <h1 className="text-3xl font-bold text-white flex items-center gap-3">
@@ -98,6 +111,7 @@ const AdminDashboard = () => {
                         <p className="text-zinc-400 text-sm mt-1">Live Feed • {orders.length} Orders in system</p>
                     </div>
 
+                    {/* Backup Button */}
                     <button
                         onClick={handleBackup}
                         disabled={backupLoading}
@@ -108,7 +122,7 @@ const AdminDashboard = () => {
                     </button>
                 </div>
 
-                {/* Filters */}
+                {/* Status Tabs/Filters */}
                 <div className="flex gap-2 mb-8 bg-zinc-900/50 p-1 rounded-xl w-fit border border-zinc-800">
                     {['pending', 'completed', 'all'].map(f => (
                         <button
@@ -129,12 +143,14 @@ const AdminDashboard = () => {
                     <div className="text-center py-20 text-zinc-500 animate-pulse">Connecting to Live Feed...</div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {/* Empty State */}
                         {filteredOrders.length === 0 && (
                             <div className="col-span-full text-center py-20 bg-zinc-900 rounded-2xl border border-zinc-800 border-dashed">
                                 <p className="text-zinc-500">No {filter} orders found.</p>
                             </div>
                         )}
 
+                        {/* Order Cards */}
                         {filteredOrders.map(order => (
                             <div key={order.id} className={`
                                 relative overflow-hidden rounded-2xl p-6 border transition-all
@@ -176,7 +192,7 @@ const AdminDashboard = () => {
                                     </div>
                                 </div>
 
-                                {/* Actions */}
+                                {/* Actions (Only for Pending) */}
                                 {order.status === 'pending' && (
                                     <div className="grid grid-cols-2 gap-3">
                                         <button

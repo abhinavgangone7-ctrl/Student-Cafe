@@ -10,12 +10,16 @@ import { logger } from "../lib/logger";
 import { useRateLimit } from "../hooks/useRateLimit";
 
 const Checkout = () => {
+    // 1. Context Hooks
     const { items, totalPrice, clearCart } = useCart();
     const { currentUser } = useAuth();
     const navigate = useNavigate();
+
+    // 2. Local State
     const [loading, setLoading] = useState(false);
 
-    // Protection: Warn user if they try to refresh during payment
+    // 3. Safety: Prevent accidental refresh during payment
+    // If 'loading' is true, browser will show "Are you sure you want to leave?"
     useEffect(() => {
         const handleBeforeUnload = (e) => {
             if (loading) {
@@ -27,10 +31,13 @@ const Checkout = () => {
         return () => window.removeEventListener("beforeunload", handleBeforeUnload);
     }, [loading]);
 
+    // 4. Calculations
     const tax = totalPrice * 0.08;
     const finalTotal = totalPrice + tax;
 
-    const checkRateLimit = useRateLimit("checkout_pay", 10000); // 10 seconds cooldown
+    // 5. Security: Rate Limit (10 seconds)
+    // Prevents double-clicking "Pay" or spamming the server.
+    const checkRateLimit = useRateLimit("checkout_pay", 10000);
 
     const handlePayment = async (e) => {
         e.preventDefault();
@@ -60,7 +67,7 @@ const Checkout = () => {
 
         try {
             // STEP 1: Verify Prices with "Source of Truth" (Database)
-            // We do NOT trust the client-side cart prices.
+            // We do NOT trust the client-side cart prices. Recent hacks showed users editing local storage.
             const verifiedItems = await Promise.all(
                 items.map(async (cartItem) => {
                     const { doc, getDoc } = await import("firebase/firestore");
@@ -71,7 +78,8 @@ const Checkout = () => {
                     }
 
                     const realData = productSnap.data();
-                    // Return the item with the REAL price from DB
+
+                    // Return the item using the REAL price from DB
                     return {
                         id: cartItem.id,
                         name: realData.name,
@@ -86,26 +94,27 @@ const Checkout = () => {
             const verifiedTax = verifiedSubtotal * 0.08;
             const verifiedTotal = Number((verifiedSubtotal + verifiedTax).toFixed(2));
 
-            // Sanity Check: If the hacked local total differs significantly, we technically proceed with the REAL total.
-            // Or we could alert the user. Proceeding with real total is smoother (auto-fix).
+            // Note: We proceed with the verified total.
 
+            // Random Token for Pickup (e.g., 4821)
             const tokenNumber = Math.floor(1000 + Math.random() * 9000).toString();
 
-            // Prepare Verified Payload
+            // Prepare Order Payload
             const orderPayload = {
                 userId: currentUser.uid,
                 userEmail: currentUser.email || "unknown",
-                items: verifiedItems, // Use the verified list
-                total: verifiedTotal, // Use the verified total
-                status: "pending",
+                items: verifiedItems, // Verified list
+                total: verifiedTotal, // Verified total
+                status: "pending",    // Initial status for Kitchen
                 createdAt: serverTimestamp(),
                 tokenNumber: tokenNumber
             };
 
-            // Create order in Firestore
+            // STEP 3: Write to Firestore
             const orderRef = await addDoc(collection(db, "orders"), orderPayload);
 
-            // Navigate to confirmation page
+            // STEP 4: Navigate to confirmation
+            // We pass state via router so the next page knows what to show without refetching
             navigate("/order-confirmation", {
                 state: {
                     orderId: orderRef.id,
@@ -125,8 +134,8 @@ const Checkout = () => {
     };
 
 
+    // Redirect if Empty:
     // If cart is empty and we are NOT in the middle of payment/loading, redirect to home.
-    // This prevents race condition where clearCart() is called before navigation.
     if (!loading && items.length === 0) {
         navigate("/");
         return null;
@@ -146,6 +155,7 @@ const Checkout = () => {
                     </div>
 
                     <form onSubmit={handlePayment} className="space-y-6">
+                        {/* Fake Credit Card Form (UI Only) */}
                         <div>
                             <label className="block text-sm font-medium mb-2 dark:text-white flex items-center gap-2">
                                 <CreditCard size={18} />
@@ -174,9 +184,8 @@ const Checkout = () => {
                                 placeholder="4242 4242 4242 4242"
                                 maxLength="19"
                                 onChange={(e) => {
-                                    // STRICT VALIDATION: Only numbers allowed
+                                    // STRICT VALIDATION: Only numbers allowed, auto-spacing
                                     const val = e.target.value.replace(/\D/g, '');
-                                    // Add spaces every 4 digits for UX
                                     e.target.value = val.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
                                 }}
                                 className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 dark:text-white focus:ring-2 focus:ring-black dark:focus:ring-white outline-none transition-all font-mono"
@@ -209,7 +218,6 @@ const Checkout = () => {
                                     maxLength={3}
                                     pattern="\d{3}"
                                     onChange={(e) => {
-                                        // strict numbers only
                                         e.target.value = e.target.value.replace(/\D/g, '');
                                     }}
                                     title="3-digit CVV"

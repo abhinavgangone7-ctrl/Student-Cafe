@@ -1,3 +1,10 @@
+/**
+ * Static Menu Data
+ * 
+ * Used for seeding the Firebase database.
+ * This is NOT the source of truth for the live app (that's Firestore).
+ * This is just a backup/initial state.
+ */
 export const products = [
     // COFFEE
     {

@@ -1,35 +1,51 @@
+// React Hooks for state management.
 import { useState } from "react";
+// Icons.
 import { X, Loader2, MessageSquare, ChevronDown } from "lucide-react";
+// Firebase Firestore functions to add data.
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+// Our Firebase configuration.
 import { db } from "../../lib/firebase";
+// Auth Context to get user info.
 import { useAuth } from "../../context/AuthContext";
+// Custom Hook to prevent spamming.
 import { useRateLimit } from "../../hooks/useRateLimit";
+// Logger for errors.
 import { logger } from "../../lib/logger";
 
 const FeedbackModal = ({ isOpen, onClose }) => {
     const { currentUser } = useAuth();
-    const checkRateLimit = useRateLimit("feedback_submit", 60000); // 1 Minute cooldown - Moved Up
 
+    // RATE LIMITING: 
+    // We restrict this action to once every 60 seconds (60000ms) per user.
+    // This prevents malicious users from flooding our database.
+    const checkRateLimit = useRateLimit("feedback_submit", 60000);
+
+    // Local State for the form.
     const [loading, setLoading] = useState(false);
     const [role, setRole] = useState("");
     const [type, setType] = useState("");
     const [message, setMessage] = useState("");
     const [showSuccess, setShowSuccess] = useState(false);
 
+    // If modal is closed, render nothing.
     if (!isOpen) return null;
 
+    // --- SUBMISSION HANDLER ---
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Stop page reload.
 
+        // 1. Check Rate Limit
         try {
             checkRateLimit();
         } catch (error) {
-            alert(error.message);
+            alert(error.message); // Tell user to wait.
             return;
         }
 
         setLoading(true);
 
+        // 2. Check Network Status manually
         if (!navigator.onLine) {
             setLoading(false);
             alert("No internet connection. Please check your network.");
@@ -37,23 +53,30 @@ const FeedbackModal = ({ isOpen, onClose }) => {
         }
 
         try {
-            // Sanitize payload (Strip dangerous characters)
+            // 3. Data Sanitization (Security)
+            // Remove < and > characters to prevent simple XSS attacks if we ever display this raw.
             const safeMessage = message.replace(/[<>]/g, "");
 
+            // 4. Prepare Payload for Firestore
             const feedbackPayload = {
                 role: role.trim(),
                 type: type,
-                message: safeMessage.trim(), // Send sanitized version
-                userId: currentUser?.uid || "anonymous",
+                message: safeMessage.trim(),
+                userId: currentUser?.uid || "anonymous", // Track who sent it
                 userEmail: currentUser?.email || "anonymous",
-                createdAt: serverTimestamp()
+                createdAt: serverTimestamp() // Server-side time is more accurate
             };
 
+            // 5. Send to Firebase
             await addDoc(collection(db, "feedback"), feedbackPayload);
 
+            // 6. Show Success State
             setShowSuccess(true);
+
+            // 7. Auto-Close after 2 seconds
             setTimeout(() => {
                 setShowSuccess(false);
+                // Reset form
                 setRole("");
                 setType("");
                 setMessage("");
@@ -68,6 +91,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
     };
 
     return (
+        // Overlay Layer
         <div className="fixed inset-0 z-[60] flex items-end justify-end p-4 sm:p-6 pointer-events-none">
             {/* Backdrop - reduced opacity closer to 'widget' feel but still modal */}
             <div
@@ -75,10 +99,11 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                 onClick={onClose}
             />
 
-            {/* Modal */}
+            {/* Modal Container */}
+            {/* 'animate-in' classes give it that smooth slide-up effect */}
             <div className="relative w-full max-w-sm bg-zinc-950 border border-zinc-900 rounded-3xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-300 pointer-events-auto mr-0 mb-0 sm:mr-4 sm:mb-4">
 
-                {/* Header */}
+                {/* --- HEADER --- */}
                 <div className="flex justify-between items-center px-6 py-4 border-b border-zinc-900 bg-zinc-950 shrink-0">
                     <h2 className="text-base font-bold text-white flex items-center gap-2">
                         Share Feedback
@@ -91,9 +116,10 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                     </button>
                 </div>
 
-                {/* Content */}
+                {/* --- CONTENT AREA --- */}
                 <div className="p-6 overflow-y-auto bg-zinc-950">
                     {showSuccess ? (
+                        // SUCCESS STATE
                         <div className="py-8 text-center animate-in fade-in duration-300">
                             <div className="w-14 h-14 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/20">
                                 <MessageSquare className="w-6 h-6" />
@@ -102,8 +128,9 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                             <p className="text-zinc-500 text-sm">Your feedback has been received.</p>
                         </div>
                     ) : (
+                        // FORM STATE
                         <form id="feedback-form" onSubmit={handleSubmit} className="space-y-5">
-                            {/* Who are you? */}
+                            {/* Field: Role */}
                             <div>
                                 <label className="block text-xs font-semibold text-zinc-500 mb-1.5 uppercase tracking-wide">
                                     Who are you?
@@ -114,12 +141,12 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                                     value={role}
                                     onChange={(e) => setRole(e.target.value)}
                                     placeholder="e.g. Student, Developer..."
-                                    maxLength={50} // Prevent long strings
+                                    maxLength={50}
                                     className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-amber-500/50 transition-all text-sm hover:border-zinc-700"
                                 />
                             </div>
 
-                            {/* What's this about? */}
+                            {/* Field: Topic (Select) */}
                             <div>
                                 <label className="block text-xs font-semibold text-zinc-500 mb-1.5 uppercase tracking-wide">
                                     Topic
@@ -137,13 +164,14 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                                         <option value="General Feedback">General Feedback</option>
                                         <option value="Order Issue">Order Issue</option>
                                     </select>
+                                    {/* Custom Chevron Icon because default select arrows are ugly */}
                                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
                                         <ChevronDown size={14} />
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Your Feedback */}
+                            {/* Field: Message */}
                             <div>
                                 <label className="block text-xs font-semibold text-zinc-500 mb-1.5 uppercase tracking-wide">
                                     Message
@@ -154,7 +182,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                                     onChange={(e) => setMessage(e.target.value)}
                                     placeholder="Tell us what you think..."
                                     rows={4}
-                                    maxLength={500} // Prevent long strings
+                                    maxLength={500}
                                     className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-amber-500/50 transition-all resize-none text-sm hover:border-zinc-700"
                                 />
                             </div>
@@ -162,7 +190,7 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                     )}
                 </div>
 
-                {/* Footer Actions */}
+                {/* --- FOOTER: Actions --- */}
                 {!showSuccess && (
                     <div className="p-4 border-t border-zinc-900 shrink-0 bg-zinc-950">
                         <div className="flex gap-3">

@@ -1,24 +1,66 @@
+/* 
+  Tailwind CSS Directives 
+  These 3 lines inject Tailwind's pre-built styles into our app.
+*/
 @tailwind base;
+/* Resets browser defaults (like margins, fonts) so every browser looks the same. */
 @tailwind components;
+/* Injects component classes (if we had any in tailwind.config.js). */
 @tailwind utilities;
+/* Injects the massive list of utility classes like 'flex', 'p-4', 'text-center'. */
 
+/* 
+  @layer base 
+  This is where we define styles that apply to bare HTML tags (like <body>, <h1>, <p>) 
+  BEFORE any utility classes are applied.
+*/
 @layer base {
+
+  /* 
+    :root 
+    This defines global CSS variables (custom properties).
+    We use these colors throughout the app so we can change the theme in one place.
+    The numbers (e.g., "20 14.3% 4.1%") are HSL color values (Hue, Saturation, Lightness).
+  */
   :root {
     --background: 20 14.3% 4.1%;
+    /* Dark background color */
     --foreground: 60 9.1% 97.8%;
+    /* Light text color */
     --primary: 47.9 95.8% 53.1%;
+    /* The main brand color (Amber/Orange) */
     --primary-foreground: 26 83.3% 14.1%;
+    /* Text color to use ON TOP of primary color */
     --border: 12 6.5% 15.1%;
+    /* Color for borders and dividers */
     --radius: 0.5rem;
+    /* Default rounded corner size (8px) */
   }
 
+  /* 
+    Global Body Styles 
+    Applies to the entire page background and text.
+  */
   body {
     @apply bg-zinc-950 text-zinc-100;
+    /* Use huge dark grey background and light grey text */
     font-family: 'Inter', system-ui, sans-serif;
+    /* Set the font stack (Inter first, then system default) */
   }
 }
 
+/* 
+  @layer utilities 
+  This is for creating our own custom utility classes that combine multiple Tailwind classes.
+  Useful for buttons or cards used in many places.
+*/
 @layer utilities {
+
+  /* 
+    .btn-primary 
+    A custom class for our main orange buttons.
+    We created this so we don't have to type "bg-amber-500 text-black..." on every single button.
+  */
   .btn-primary {
     @apply bg-amber-500 text-black px-6 py-3 rounded-lg font-medium hover:bg-amber-400 transition-colors uppercase tracking-wider;
   }

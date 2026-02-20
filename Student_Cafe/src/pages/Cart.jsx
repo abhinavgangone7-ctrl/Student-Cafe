@@ -3,13 +3,24 @@ import { useCart } from "../context/CartContext";
 import Navbar from "../components/layout/Navbar";
 import { Trash2, Plus, Minus, ArrowRight } from "lucide-react";
 
+/**
+ * Cart Page
+ * 
+ * What it is:
+ * A dedicated page summary of the shopping cart.
+ * 
+ * Note:
+ * This overlaps with the CartSidebar, but provides a more focused "Pre-Checkout" review.
+ */
 const Cart = () => {
     const { items, removeFromCart, updateQuantity, totalPrice } = useCart();
     const navigate = useNavigate();
 
+    // Math
     const tax = totalPrice * 0.08;
     const finalTotal = totalPrice + tax;
 
+    // State 1: Empty Cart
     if (items.length === 0) {
         return (
             <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pt-20">
@@ -28,6 +39,7 @@ const Cart = () => {
         );
     }
 
+    // State 2: Active Cart
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pt-20 pb-10">
             <Navbar />
@@ -36,23 +48,27 @@ const Cart = () => {
                 <h1 className="text-3xl font-bold mb-2 dark:text-white">Your Order</h1>
                 <p className="text-zinc-500 mb-8">{items.length} item{items.length !== 1 && 's'} in your order</p>
 
+                {/* List of Items */}
                 <div className="space-y-6">
                     {items.map((item) => (
                         <div
                             key={item.id}
                             className="bg-white dark:bg-zinc-900 p-4 rounded-2xl flex items-center gap-4 shadow-sm border border-zinc-200 dark:border-zinc-800"
                         >
+                            {/* Image */}
                             <img
                                 src={item.image_url}
                                 alt={item.name}
                                 className="w-20 h-20 object-cover rounded-xl"
                             />
 
+                            {/* Info */}
                             <div className="flex-1">
                                 <h3 className="font-bold text-lg dark:text-white">{item.name}</h3>
                                 <p className="text-zinc-500 text-sm">${item.price.toFixed(2)} each</p>
                             </div>
 
+                            {/* Controls */}
                             <div className="flex items-center gap-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1">
                                 <button
                                     onClick={() => updateQuantity(item.id, item.quantity - 1)}
@@ -69,6 +85,7 @@ const Cart = () => {
                                 </button>
                             </div>
 
+                            {/* Remove Button */}
                             <button
                                 onClick={() => removeFromCart(item.id)}
                                 className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
@@ -76,6 +93,7 @@ const Cart = () => {
                                 <Trash2 size={20} />
                             </button>
 
+                            {/* Subtotal */}
                             <div className="text-right font-bold w-20 dark:text-white">
                                 ${(item.price * item.quantity).toFixed(2)}
                             </div>
@@ -83,6 +101,7 @@ const Cart = () => {
                     ))}
                 </div>
 
+                {/* Footer Summary */}
                 <div className="mt-10 bg-zinc-100 dark:bg-zinc-900 p-6 rounded-2xl">
                     <h3 className="font-bold text-lg mb-4 dark:text-white">Order Summary</h3>
 

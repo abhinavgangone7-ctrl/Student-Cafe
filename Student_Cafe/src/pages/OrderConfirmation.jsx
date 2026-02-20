@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+// Location allows us to read "state" passed from the Checkout page
 import { useLocation, Link, Navigate } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
 import { Check, Coffee } from "lucide-react";
@@ -6,24 +7,20 @@ import { useCart } from "../context/CartContext";
 
 const OrderConfirmation = () => {
     const location = useLocation();
+    // Retrieve data passed from Checkout (Success) Logic
     const { orderId, tokenNumber } = location.state || {};
     const { clearCart } = useCart();
 
+    // Effect: Clear the cart immediately upon valid arrival
     useEffect(() => {
-        // Clear cart when landing on confirmation page
-        // This avoids race conditions in Checkout page
+        // Why here? 
+        // Clearing it in Checkout might happen too early (race condition) or too late.
+        // Doing it here ensures the user definitely made it to the success screen.
         clearCart();
     }, [clearCart]);
 
-    // For debugging: if no state, just show generated values or handle gracefully
-    // instead of redirecting to Home instantly.
-    // if (!orderId) {
-    //     return <Navigate to="/" />;
-    // }
-
-    // Fallback for demo purposes if state is missing (so user sees the page)
+    // Fallback: Default values if user manually navigates here (Debug/Demo)
     const displayToken = tokenNumber || "DEMO-123";
-    const displayOrderId = orderId || "demo-order-id";
 
     return (
         <div className="min-h-screen bg-white dark:bg-zinc-950 pt-20 pb-10 flex flex-col items-center">
@@ -63,7 +60,7 @@ const OrderConfirmation = () => {
                     </div>
                 </div>
 
-                {/* Action Button */}
+                {/* Action Button: Loop back to Menu */}
                 <Link
                     to="/menu"
                     className="block w-full py-4 bg-black dark:bg-white text-white dark:text-black font-bold rounded-full hover:opacity-90 transition-opacity"
