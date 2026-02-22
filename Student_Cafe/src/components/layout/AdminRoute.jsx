@@ -1,9 +1,6 @@
-// Helper to redirect users who aren't allowed here.
 import { Navigate } from "react-router-dom";
-// Get the current user to see who they are.
 import { useAuth } from "../../context/AuthContext";
-// Helper to check if their email is in the "Allowed List".
-import { isAdmin } from "../../lib/admins";
+import { useState, useEffect } from "react";
 
 /**
  * AdminRoute Wrapper
@@ -14,28 +11,54 @@ import { isAdmin } from "../../lib/admins";
  * Logic:
  * 1. Wait for Auth to load.
  * 2. If not logged in -> Go to Login.
- * 3. If logged in but NOT an admin -> Go to Home + Log a warning.
+ * 3. Verify Custom Claim: Checks the JWT Token directly from Firebase for { admin: true }.
  * 4. If Admin -> Show the page.
  */
 const AdminRoute = ({ children }) => {
     const { currentUser, loading } = useAuth();
+    const [isAdminState, setIsAdminState] = useState(null);
 
-    // 1. Still checking if they are logged in? Show nothing (or a loader) for a split second.
-    if (loading) return null;
+    useEffect(() => {
+        const verifyAdminStatus = async () => {
+            if (currentUser) {
+                try {
+                    // Force refresh to ensure we have latest claims
+                    const tokenResult = await currentUser.getIdTokenResult(true);
+                    
+                    // The 'admin' claim is set securely by our Backend/Cloud Function
+                    if (tokenResult.claims.admin === true) {
+                        setIsAdminState(true);
+                    } else {
+                        console.warn(`[AUTH] Access Denied. User ${currentUser.email} does not have the 'admin' custom claim.`);
+                        setIsAdminState(false);
+                    }
+                } catch (error) {
+                    console.error("Error verifying admin claim:", error);
+                    setIsAdminState(false);
+                }
+            } else {
+                setIsAdminState(false); // Not logged in
+            }
+        };
+
+        if (!loading) {
+            verifyAdminStatus();
+        }
+    }, [currentUser, loading]);
+
+    // 1. Still auth loading or checking custom claims?
+    if (loading || isAdminState === null) {
+        return <div className="min-h-screen bg-zinc-900 flex items-center justify-center text-white">Verifying Permissions...</div>;
+    }
 
     // 2. Not logged in at all? Kick them to the login page.
     if (!currentUser) {
         return <Navigate to="/login" />;
     }
 
-    // 3. Logged in, but are they an Admin?
-    // We check their email against our hardcoded list in 'src/lib/admins.js'.
-    if (!isAdmin(currentUser.email)) {
-        // Helpful log so the developer knows why they were rejected.
-        console.warn(`[AUTH] Access Denied for ${currentUser.email}. Add this email to src/lib/admins.js`);
-
-        // Redirect regular users back to the home page.
-        return <Navigate to="/" />;
+    // 3. Logged in, but NOT an Admin. Back to Home.
+    if (!isAdminState) {
+         return <Navigate to="/" />;
     }
 
     // 4. They are an Admin! Show the protected page.

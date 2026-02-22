@@ -1,8 +1,8 @@
-// Helper to get current URL (not used directly here but often useful in layouts).
 import { useLocation } from "react-router-dom";
 // Shared UI Features that live on every page.
 import CartSidebar from "../features/CartSidebar";
 import FeedbackWidget from "../features/FeedbackWidget";
+import CookieConsent from "../features/CookieConsent"; // <-- COMPLIANCE REQUIREMENT
 
 /**
  * MainLayout Component
@@ -52,6 +52,9 @@ const MainLayout = ({ children }) => {
             {/* These are always available, hidden off-screen until opened. */}
             <CartSidebar />
             <FeedbackWidget />
+
+            {/* Global Legal Requirements */}
+            <CookieConsent />
         </div>
     );
 };

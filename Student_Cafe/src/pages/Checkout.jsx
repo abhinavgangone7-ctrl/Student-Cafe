@@ -59,7 +59,7 @@ const Checkout = () => {
         }
 
         // Check 2: Payload Validation (Zero Compromise)
-        if (!currentUser?.uid || items.length === 0 || finalTotal <= 0) {
+        if (!currentUser?.uid || items.length === 0) {
             setLoading(false);
             alert("Order validation failed. Please refresh and try again.");
             return;
@@ -67,7 +67,7 @@ const Checkout = () => {
 
         try {
             // STEP 1: Verify Prices with "Source of Truth" (Database)
-            // We do NOT trust the client-side cart prices. Recent hacks showed users editing local storage.
+            // Even in a dummy app, verify prices locally to prevent blank orders crashing the UI
             const verifiedItems = await Promise.all(
                 items.map(async (cartItem) => {
                     const { doc, getDoc } = await import("firebase/firestore");
@@ -94,27 +94,33 @@ const Checkout = () => {
             const verifiedTax = verifiedSubtotal * 0.08;
             const verifiedTotal = Number((verifiedSubtotal + verifiedTax).toFixed(2));
 
-            // Note: We proceed with the verified total.
-
             // Random Token for Pickup (e.g., 4821)
             const tokenNumber = Math.floor(1000 + Math.random() * 9000).toString();
 
             // Prepare Order Payload
+            const { collection, addDoc, serverTimestamp } = await import("firebase/firestore");
             const orderPayload = {
                 userId: currentUser.uid,
                 userEmail: currentUser.email || "unknown",
-                items: verifiedItems, // Verified list
-                total: verifiedTotal, // Verified total
-                status: "pending",    // Initial status for Kitchen
+                items: verifiedItems,
+                total: verifiedTotal,
+                status: "pending",
                 createdAt: serverTimestamp(),
                 tokenNumber: tokenNumber
             };
 
-            // STEP 3: Write to Firestore
-            const orderRef = await addDoc(collection(db, "orders"), orderPayload);
+            // STEP 3: Write to Firestore (Allowed via dummy rules)
+            // Add a 10-second timeout to handle silent offline hanging
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("Network timeout. Please check your internet connection.")), 10000)
+            );
 
-            // STEP 4: Navigate to confirmation
-            // We pass state via router so the next page knows what to show without refetching
+            const orderRef = await Promise.race([
+                addDoc(collection(db, "orders"), orderPayload),
+                timeoutPromise
+            ]);
+
+            // SUCCESS! Navigate to confirmation page
             navigate("/order-confirmation", {
                 state: {
                     orderId: orderRef.id,

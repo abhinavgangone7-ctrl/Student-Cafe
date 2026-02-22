@@ -1,0 +1,34 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- HELPER FUNCTIONS ---
+    // Check if user is logged in
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user has the custom 'admin' claim
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+
+    // --- PRODUCTS COLLECTION (Menu) ---
+    match /products/{productId} {
+      // Anyone can read the menu
+      allow read: if true;
+      // ONLY true Admins can create, delete, or modify menu items
+      allow write: if isAdmin();
+    }
+
+    // --- ORDERS COLLECTION ---
+    match /orders/{orderId} {
+      // Users can only read their OWN orders. Admins can read all orders.
+      allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.userId);
+      
+      // For practice app only: Allow users to write their own orders.
+      // DANGER in prod: Client can overwrite their totals.
+      allow write: if isAuthenticated() && request.auth.uid == request.resource.data.userId; 
+    }
+  }
+}

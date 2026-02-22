@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. PRODUCTS (Menu)
+    // Public: Everyone can read the menu.
+    // Admin Only: Only specified emails can change prices/names.
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if request.auth != null && 
+                   request.auth.token.email in ["abhinavgangone7@gmail.com"]; 
+    }
+
+    // 2. ORDERS
+    // Create: Any logged-in user can place an order.
+    // Read: You can see your own orders OR if you are an admin.
+    // Update (Refund/Complete): ADMIN ONLY.
+    match /orders/{orderId} {
+      allow create: if request.auth != null;
+      
+      allow read: if request.auth != null && (
+                    request.auth.uid == resource.data.userId || 
+                    request.auth.token.email in ["abhinavgangone7@gmail.com"]
+                  );
+                  
+      allow update: if request.auth != null && 
+                    request.auth.token.email in ["abhinavgangone7@gmail.com"];
+    }
+
+    // 3. FEEDBACK
+    // Public: Anyone can submit feedback.
+    match /feedback/{feedbackId} {
+      allow create: if true;
+      allow read: if request.auth != null && 
+                  request.auth.token.email in ["abhinavgangone7@gmail.com"];
+    }
+  }
+}

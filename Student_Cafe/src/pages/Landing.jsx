@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Coffee, Wifi, BookOpen } from "lucide-react";
 // The top navigation bar.
 import Navbar from "../components/layout/Navbar";
+import { useState } from "react";
+import PrivacyPolicyModal from "../components/features/PrivacyPolicyModal";
 
 /**
  * Landing Page
@@ -15,6 +17,7 @@ import Navbar from "../components/layout/Navbar";
  * To welcome the user and convince them to click "Order Now" or "Sign In".
  */
 const Landing = () => {
+    const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
     return (
         <div className="min-h-screen bg-zinc-950 text-white selection:bg-amber-500/30">
             <Navbar />
@@ -67,6 +70,33 @@ const Landing = () => {
                     </div>
                 </div>
             </section>
+
+            {/* --- FOOTER / COMPLIANCE --- */}
+            <footer className="py-8 border-t border-zinc-900 text-center">
+                <div className="flex justify-center gap-6 mb-4">
+                    <button
+                        onClick={() => setIsPrivacyOpen(true)}
+                        className="text-sm text-zinc-500 hover:text-white transition-colors"
+                    >
+                        Privacy Policy
+                    </button>
+                    <button
+                        onClick={() => alert("To delete your account and all associated data, please contact the administrator or use the profile settings (coming soon).")}
+                        className="text-sm text-zinc-500 hover:text-white transition-colors"
+                    >
+                        Request Data Deletion
+                    </button>
+                </div>
+                <p className="text-xs text-zinc-600">
+                    &copy; {new Date().getFullYear()} Student Cafe. All rights reserved.
+                </p>
+            </footer>
+
+            {/* Privacy Policy Modal overlay */}
+            <PrivacyPolicyModal
+                isOpen={isPrivacyOpen}
+                onClose={() => setIsPrivacyOpen(false)}
+            />
         </div>
     );
 };
