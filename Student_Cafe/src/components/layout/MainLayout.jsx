@@ -2,7 +2,7 @@ import { useLocation } from "react-router-dom";
 // Shared UI Features that live on every page.
 import CartSidebar from "../features/CartSidebar";
 import FeedbackWidget from "../features/FeedbackWidget";
-import CookieConsent from "../features/CookieConsent"; // <-- COMPLIANCE REQUIREMENT
+import StoragePolicyBanner from "../features/StoragePolicyBanner"; // Renamed to evade ad blockers
 
 /**
  * MainLayout Component
@@ -53,8 +53,8 @@ const MainLayout = ({ children }) => {
             <CartSidebar />
             <FeedbackWidget />
 
-            {/* Global Legal Requirements */}
-            <CookieConsent />
+            {/* Global Legal Requirements - Renamed to evade ad blockers */}
+            <StoragePolicyBanner />
         </div>
     );
 };

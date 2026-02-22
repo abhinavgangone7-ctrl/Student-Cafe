@@ -2,24 +2,18 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 
 /**
- * CookieConsent Component
+ * StoragePolicyBanner Component
  * 
  * What it is:
  * A legally required banner that informs users we use local storage.
- * 
- * Logic:
- * 1. Checks localStorage on load to see if they already agreed.
- * 2. If 'false' or null, shows the banner.
- * 3. On "Accept", saves 'true' to localStorage and hides.
+ * (Renamed from CookieConsent to avoid strict ad-blocker filters).
  */
-const CookieConsent = () => {
+const StoragePolicyBanner = () => {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
-        // Check if user already dismissed it
         const hasConsent = localStorage.getItem("cookie_consent");
         if (!hasConsent) {
-            // Slight delay so it doesn't jarringly pop up the exact millisecond the site loads
             const timer = setTimeout(() => setIsVisible(true), 1500);
             return () => clearTimeout(timer);
         }
@@ -39,7 +33,7 @@ const CookieConsent = () => {
                     🍪 Cookie & Storage Policy
                 </h3>
                 <button
-                    onClick={() => setIsVisible(false)} // Temporarily hide (will show again next refresh)
+                    onClick={() => setIsVisible(false)}
                     className="text-zinc-500 hover:text-white transition-colors"
                 >
                     <X size={16} />
@@ -62,4 +56,4 @@ const CookieConsent = () => {
     );
 };
 
-export default CookieConsent;
+export default StoragePolicyBanner;

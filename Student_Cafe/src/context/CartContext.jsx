@@ -38,7 +38,8 @@ export const CartProvider = ({ children }) => {
     const [items, setItems] = useState(() => {
         const saved = safeStorage.getItem("cart");
         try {
-            return saved ? JSON.parse(saved) : [];
+            const parsed = saved ? JSON.parse(saved) : [];
+            return Array.isArray(parsed) ? parsed : []; // Strictly enforce Array type to prevent .reduce() crashes
         } catch (e) {
             return [];
         }

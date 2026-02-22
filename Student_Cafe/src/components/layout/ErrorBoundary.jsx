@@ -38,28 +38,20 @@ class ErrorBoundary extends React.Component {
      * and show the error message.
      */
     static getDerivedStateFromError(error) {
-        // Return the new state so the app knows something broke.
-        return { hasError: true };
+        // Return the new state so the app knows something broke, and capture the exact error message.
+        return { hasError: true, errorMessage: error ? error.toString() : "Unknown Error" };
     }
 
-    /**                                 
-     * componentDidCatch
-     * 
-     * What it does:
-     * This runs AFTER the error has been caught and the state has been updated.
-     * 
-     * Role:
-     * It is used for logging/reporting. We use it to send the error details to our logging system 
-     * so developers can see what went wrong.
-     */
     componentDidCatch(error, errorInfo) {
-        // Log the crash in Plain English using our custom logger.
-        // "logger.error" saves the details securely.
-        logger.error(
-            "SYSTEM", // Category: This is a system-level error.
-            " The application crashed unexpectedly while rendering.", // Message: What happened.
-            { error, componentStack: errorInfo.componentStack } // Data: The actual error object and where it happened in the code.
-        );
+        try {
+            logger.error(
+                "SYSTEM",
+                " The application crashed unexpectedly while rendering.",
+                { error, componentStack: errorInfo.componentStack }
+            );
+        } catch (e) {
+            console.error("ErrorBoundary logger also crashed:", e);
+        }
     }
 
     // "render" determines what shows up on the screen.
@@ -79,12 +71,17 @@ class ErrorBoundary extends React.Component {
                         </div>
                         {/* Main error title */}
                         <h1 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
-                            Something went wrong
+                            Crash Detected
                         </h1>
                         {/* Helpful message for the user */}
-                        <p className="text-zinc-500 mb-6">
-                            We've logged the error and our team has been notified. Please try refreshing the page.
+                        <p className="text-zinc-500 mb-4">
+                            Your specific browser session experienced a fatal error:
                         </p>
+
+                        {/* THE ACTUAL ERROR STRING TO HELP DEBUG THE BLANK SCREEN */}
+                        <div className="bg-red-500/10 border border-red-500/20 text-red-400 font-mono text-xs text-left p-4 rounded-xl mb-6 overflow-auto max-h-32 break-all">
+                            {this.state.errorMessage}
+                        </div>
                         {/* 
                            Reload Button
                            Action: When clicked, it forces the browser to reload the entire page (window.location.reload).
