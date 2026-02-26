@@ -9,7 +9,7 @@ import { getFirestore } from "firebase/firestore"; // For the Database
 // without changing the code, and keeps secrets out of the codebase (sort of - these are public keys).
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY, // Identifies your app to Google
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN, // Where users are redirected for login
+  authDomain: window.location.host, // Use the current app domain as authDomain (proxied via Vercel/Vite)
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID, // Your specific project ID
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET, // Where images are stored
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID, // For push notifications
