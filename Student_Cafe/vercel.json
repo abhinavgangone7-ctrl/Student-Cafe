@@ -1,10 +1,6 @@
 {
     "rewrites": [
         {
-            "source": "/__/auth(.*)",
-            "destination": "https://student-cafe-app-v1-9382.firebaseapp.com/__/auth$1"
-        },
-        {
             "source": "/(.*)",
             "destination": "/index.html"
         }
