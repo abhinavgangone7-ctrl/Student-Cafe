@@ -5,7 +5,9 @@ import {
     GoogleAuthProvider,
     signInWithPopup,
     signOut,
-    onAuthStateChanged
+    onAuthStateChanged,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword
 } from "firebase/auth";
 // Import our initialized firebase auth instance.
 import { auth } from "../lib/firebase";
@@ -34,6 +36,16 @@ export const AuthProvider = ({ children }) => {
         return signInWithPopup(auth, provider);
     };
 
+    // Function to log in with Email and Password
+    const loginWithEmail = (email, password) => {
+        return signInWithEmailAndPassword(auth, email, password);
+    };
+
+    // Function to sign up with Email and Password
+    const signupWithEmail = (email, password) => {
+        return createUserWithEmailAndPassword(auth, email, password);
+    };
+
     // Function to log out.
     // Tells Firebase to end the session.
     const logout = () => {
@@ -57,6 +69,8 @@ export const AuthProvider = ({ children }) => {
     const value = {
         currentUser,
         login,
+        loginWithEmail,
+        signupWithEmail,
         logout,
         loading
     };
