@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 // Authentication Hook
 import { useAuth } from "../context/AuthContext";
+import { getRedirectResult } from "firebase/auth";
+import { auth } from "../lib/firebase";
 // Icons
 import { Coffee, AlertCircle, Loader2 } from "lucide-react";
 // Logging Utility
@@ -20,12 +22,17 @@ const Login = () => {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
-    // 3. Effect: Auto-Redirect if ALREADY logged in.
-    // Why: We don't want a logged-in user staring at the login screen.
+    // 3. Effect: Auto-Redirect if ALREADY logged in, and handle redirect errors.
     useEffect(() => {
         if (currentUser) {
             navigate("/menu");
         }
+
+        // Check for errors from the redirect flow
+        getRedirectResult(auth).catch((authError) => {
+            logger.error("AUTH", "Error after redirect sign-in.", authError);
+            setError("Failed to sign in. Please try again or try another browser.");
+        });
     }, [currentUser, navigate]);
 
     // 4. Rate Limit: 3 Seconds. 
