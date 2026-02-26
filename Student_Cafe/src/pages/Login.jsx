@@ -41,9 +41,8 @@ const Login = () => {
 
             await login(); // Calls Firebase Google Popup
 
-            // If successful, the 'useEffect' above might catch it, 
-            // but we also navigate here to be sure/fast.
-            navigate("/menu");
+            // Navigation is handled automatically by the useEffect above
+            // once currentUser is updated in AuthContext.
         } catch (error) {
             logger.error("AUTH", "User failed to sign in with Google.", error);
             setError("Failed to sign in. Please try again.");
